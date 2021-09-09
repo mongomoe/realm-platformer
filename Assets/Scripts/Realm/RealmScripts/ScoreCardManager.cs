@@ -42,7 +42,7 @@ public class ScoreCardManager : MonoBehaviour
     public static void watchForChangesToCurrentStats()
     {
         // create a listener that responds to changes to the particular stats for this run/playthrough
-        // TODO: Create a listener that reacts to changes to the currentStat and calls updateCurrentStats() to update the UI when stats are changed
+        currentStat.PropertyChanged += propertyHandler;
     }
 
     public static void unRegisterListener()

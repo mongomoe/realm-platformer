@@ -58,8 +58,9 @@ public class LeaderboardManager : MonoBehaviour
 
     public int getRealmPlayerTopStat()
     {
-        // TODO: Query the realm instance for the current player, find the current player's top score and return that value
-         return 0;
+        var realmPlayer = realm.All<Player>().Where(p => p.Name == username).First();
+        var realmPlayerTopStat = realmPlayer.Stats.OrderByDescending(s => s.Score).First().Score;
+        return realmPlayer.Stats.OrderByDescending(s => s.Score).First().Score;
     }
 
     void toggleUIVisible()
@@ -95,7 +96,7 @@ public class LeaderboardManager : MonoBehaviour
         displayTitle.text = "Leaderboard:";
         displayTitle.AddToClassList("display-title");
 
-        // TODO: Query the realm instance for all stats, and order by the highest scores to the lowest scores
+        topStats = realm.All<Stat>().OrderByDescending(s => s.Score).ToList();
         createTopStatListView();
     }
     public void createTopStatListView()
@@ -144,9 +145,25 @@ public class LeaderboardManager : MonoBehaviour
     }
     public void setStatListener()
     {
-        // TODO: Create a listener that handles any changes to any Stat objects,
-        // if there are changes, call `setNewlyInsertedScores()` to determine if
-        // theres any new high scores and update the leaderboard in the UI
+        // Observe collection notifications. Retain the token to keep observing.
+        listenerToken = realm.All<Stat>()
+            .SubscribeForNotifications((sender, changes, error) =>
+            {
+
+                if (error != null)
+                {
+                    // Show error message
+                    Debug.Log("an error occurred while listening for score changes :" + error);
+                    return;
+                }
+
+                if(changes != null)
+                {
+                    setNewlyInsertedScores(changes.InsertedIndices);
+                }
+                // we only need to check for inserted because scores can't be modified or deleted after the run is complete
+                
+            });
     }
 
     public void setNewlyInsertedScores(int[] insertedIndices)
@@ -175,6 +192,14 @@ public class LeaderboardManager : MonoBehaviour
     }
     void OnDisable()
     {
-        // TODO: dispose of the realm instance and the listenerToken 
+        if (realm != null)
+        {
+            realm.Dispose();
+        }
+
+        if (listenerToken != null)
+        {
+            listenerToken.Dispose();
+        }
     }
 }

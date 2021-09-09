@@ -2,9 +2,20 @@ using System.Collections.Generic;
 using MongoDB.Bson;
 using Realms;
 
-// TODO: Realm-ify Player model
-public class Player {
- public string _id;
- public string name;
- public IList<Stat> stats;
+public class Player : RealmObject
+{
+
+    [PrimaryKey]
+    [MapTo("_id")]
+    [Required]
+    public string Id { get; set; } 
+
+
+    [MapTo("stats")]
+    public IList<Stat> Stats { get; }
+
+    [MapTo("name")]
+    [Required]
+    public string Name { get; set; }
+
 }

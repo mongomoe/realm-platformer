@@ -25,16 +25,43 @@ public class RealmController : MonoBehaviour
 
     public static Realm GetRealm()
     {
-        // TODO: open a realm and return it
+        realm = Realm.GetInstance();
+        return realm;
     }
 
     public static void setLoggedInUser(string loggedInUser)
     {
         realm = GetRealm();
-        // TODO: "Set the `currentPlayer` variable by querying the realm for the
-        // player. If the player exists, give the player a new Stat object,
-        // otherwise create a new player and give the new player a new Stat
-        // object
+        var matchedPlayers = realm.All<Player>().Where(p => p.Name == loggedInUser);
+
+        if (matchedPlayers.Count() > 0) // if the player exists
+        {
+            currentPlayer = matchedPlayers.First();
+            var s1 = new Stat();
+            s1.StatOwner = currentPlayer;
+
+            realm.Write(() =>
+            {
+                currentStat = realm.Add(s1);
+                currentPlayer.Stats.Add(currentStat);
+            });
+        }
+        else
+        {
+            var p1 = new Player();
+            p1.Id = ObjectId.GenerateNewId().ToString();
+            p1.Name = loggedInUser;
+
+            var s1 = new Stat();
+            s1.StatOwner = p1;
+
+            realm.Write(() =>
+            {
+                currentPlayer = realm.Add(p1);
+                currentStat = realm.Add(s1);
+                currentPlayer.Stats.Add(currentStat);
+            });
+        }
 
         startGame();
     }
@@ -55,11 +82,17 @@ public class RealmController : MonoBehaviour
 
     public static void collectToken() // performs an update on the Character Model's token count
     {
-        // TODO: within a write transaction, increment the number of token's collected in the current playthrough/run's stat
+        realm.Write(() =>
+        {
+            currentStat.TokensCollected += 1;
+        });
     }
     public static void defeatEnemy() // performs an update on the Character Model's enemiesDefeated Count
     {
-        // TODO: within a write transaction, increment the number of enemies's defeated in the current playthrough/run's stat
+        realm.Write(() =>
+        {
+            currentStat.EnemiesDefeated += 1;
+        });
     }
 
     // deleteCurrentScore deletes the stats of the player's current playthrough/run and unregisters the listener on the old stat
@@ -68,13 +101,23 @@ public class RealmController : MonoBehaviour
     {
         ScoreCardManager.unRegisterListener();
 
-        // TODO: within a write transaction, delete the current state. Once the current stat is deleted, remove the reference from the currentPlayer object
+        realm.Write(() =>
+        {
+            realm.Remove(currentStat);
+            currentPlayer.Stats.Remove(currentStat);
+        });
     }
     public static void restartGame()
     {
         if (currentPlayer != null)
         {
-            // TODO: within a write transaction, create a new Stat for the current player
+            var s1 = new Stat();
+
+            realm.Write(() =>
+            {
+                currentStat = realm.Add(s1);
+                currentPlayer.Stats.Add(currentStat);
+            });
 
             ScoreCardManager.setCurrentStat(currentStat); // call `setCurrentStat()` to set the current stat in the UI using ScoreCardManager
             ScoreCardManager.watchForChangesToCurrentStats(); // call `watchForChangesToCurrentStats()` to register a listener on the new score in the ScoreCardManager
@@ -102,7 +145,12 @@ public class RealmController : MonoBehaviour
             bonusPoints = 50;
         }
 
-        // TODO: within a write transaction, create a new Stat for the current player
+        // calculate final points + write to realm with points
+        var finalScore = calculatePoints();
+        realm.Write(() =>
+        {
+            currentStat.Score = finalScore;
+        });
 
 
         var scoreAndBonusPoints = new int[2];
