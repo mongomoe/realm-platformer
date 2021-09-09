@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Realms;
 using System.Linq;
+using Realms.Sync;
+using System.Threading.Tasks;
 
 public class LeaderboardManager : MonoBehaviour
 {
@@ -27,13 +29,18 @@ public class LeaderboardManager : MonoBehaviour
         Instance = this;
     }
 
+    public static async Task<Realm> GetRealm()
+    {
+        var syncConfiguration = new SyncConfiguration("UnityTutorialPartition", RealmController.syncUser);
+        return await Realm.GetInstanceAsync(syncConfiguration);
+    }
 
 
-    public void setLoggedInUser(string loggedInUser)
+    public async void setLoggedInUser(string loggedInUser)
     {
         username = loggedInUser;
 
-        realm = Realm.GetInstance();
+        realm = await GetRealm();
 
         // only create the leaderboard on the first run, consecutive restarts/reruns will already have a leaderboard created
         if (isLeaderboardGUICreated == false)

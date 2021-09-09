@@ -23,50 +23,75 @@ public class RealmController : MonoBehaviour
     public static Player currentPlayer; // current logged in player
     public static Stat currentStat; // current stats for this run/playthrough
 
-    public static Realm GetRealm()
+    private static App realmApp = App.Create(Constants.Realm.AppId); // sync variable
+    public static Realms.Sync.User syncUser; // sync variable
+
+
+    public static async Task<Realm> GetRealm(Realms.Sync.User loggedInUser)
     {
-        realm = Realm.GetInstance();
-        return realm;
+        var syncConfiguration = new SyncConfiguration("UnityTutorialPartition", loggedInUser);
+        return await Realm.GetInstanceAsync(syncConfiguration);
     }
 
-    public static void setLoggedInUser(string loggedInUser)
+
+    public static async Task<Player> setLoggedInUser(string userInput, string passInput)
+    {        
+        syncUser = await realmApp.LogInAsync(Credentials.EmailPassword(userInput, passInput));
+        if (syncUser != null)
+        {
+            realm = await GetRealm(syncUser);
+            currentPlayer = realm.Find<Player>(syncUser.Id);
+
+            if (currentPlayer != null)
+            {
+                var s1 = new Stat();
+                s1.StatOwner = currentPlayer;
+
+                realm.Write(() =>
+                {
+                    currentStat = realm.Add(s1);
+                    currentPlayer.Stats.Add(currentStat);
+                });
+
+                startGame();
+            }
+            else
+            {
+                Debug.Log("This player exists a MongoDB Realm User but not as a Realm Object, please delete the Sync User and create one ussing the register button");
+            }
+        }
+
+        return currentPlayer;
+    }
+
+    public static async Task<Player> OnPressRegister(string userInput, string passInput)
     {
-        realm = GetRealm();
-        var matchedPlayers = realm.All<Player>().Where(p => p.Name == loggedInUser);
+        await realmApp.EmailPasswordAuth.RegisterUserAsync(userInput, passInput);
+        syncUser = await realmApp.LogInAsync(Credentials.EmailPassword(userInput, passInput));
+        realm = await GetRealm(syncUser);
+        Debug.Log($"Realm is located at: {realm.Config.DatabasePath}");
 
-        if (matchedPlayers.Count() > 0) // if the player exists
+        var p1 = new Player();
+        p1.Id = syncUser.Id;
+        p1.Name = userInput;
+
+        var s1 = new Stat();
+        s1.StatOwner = p1;
+
+
+        realm.Write(() =>
         {
-            currentPlayer = matchedPlayers.First();
-            var s1 = new Stat();
-            s1.StatOwner = currentPlayer;
-
-            realm.Write(() =>
-            {
-                currentStat = realm.Add(s1);
-                currentPlayer.Stats.Add(currentStat);
-            });
-        }
-        else
-        {
-            var p1 = new Player();
-            p1.Id = ObjectId.GenerateNewId().ToString();
-            p1.Name = loggedInUser;
-
-            var s1 = new Stat();
-            s1.StatOwner = p1;
-
-            realm.Write(() =>
-            {
-                currentPlayer = realm.Add(p1);
-                currentStat = realm.Add(s1);
-                currentPlayer.Stats.Add(currentStat);
-            });
-        }
+            currentPlayer = realm.Add(p1);
+            currentStat = realm.Add(s1);
+            currentPlayer.Stats.Add(currentStat);
+        });
 
         startGame();
+
+        Debug.Log("Game has started " + currentPlayer.Name);
+
+        return currentPlayer;
     }
-
-
 
     
 
