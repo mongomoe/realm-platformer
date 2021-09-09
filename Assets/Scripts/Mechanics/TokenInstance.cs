@@ -1,3 +1,4 @@
+
 using Platformer.Gameplay;
 using UnityEngine;
 using static Platformer.Core.Simulation;
@@ -53,6 +54,7 @@ namespace Platformer.Mechanics
             sprites = collectedAnimation;
             if (controller != null)
                 collected = true;
+            RealmController.collectToken();
             //send an event into the gameplay system to perform some behaviour.
             var ev = Schedule<PlayerTokenCollision>();
             ev.token = this;

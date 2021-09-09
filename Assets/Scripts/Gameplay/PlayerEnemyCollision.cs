@@ -24,6 +24,7 @@ namespace Platformer.Gameplay
 
             if (willHurtEnemy)
             {
+                RealmController.defeatEnemy();
                 var enemyHealth = enemy.GetComponent<Health>();
                 if (enemyHealth != null)
                 {
